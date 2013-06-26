@@ -1,0 +1,70 @@
+* This class is not very optimised as a local class has been converted to a global class
+
+
+
+  data:
+    lv_subject type sood-objdes,
+    lv_sub type so_obj_des.
+
+*    CHECK NOT P_SEND IS INITIAL.
+
+*   Attchment name is the fillup order number
+  lv_subject = lv_inq.
+
+  try.
+*     -------- create persistent send request ------------------------
+      send_request = cl_bcs=>create_persistent( ).
+
+*     -------- create and set document with attachment ---------------
+*     create document object from internal table with text
+*        append 'Tag File Interface' to main_text.
+      append initial line to main_text reference into lo_line.
+      concatenate 'Test text' lv_inq into lo_line->line separated by space.
+
+* Surgeon name
+      append initial line to main_text reference into lo_line.
+      concatenate 'Test text 2:' ls_header-surgeon_name  into lo_line->line separated by space.
+
+* Patient
+      append initial line to main_text reference into lo_line.
+      concatenate 'Test text 3:' ls_header-patient into lo_line->line separated by space.
+
+*Operation Date
+      append initial line to main_text reference into lo_line.
+      concatenate ..... separated by '/'.
+      concatenate 'Operation Date:'  lo_line->line into lo_line->line separated by space.
+
+
+      document = cl_document_bcs=>create_document(
+        i_type    = 'RAW'
+        i_text    = main_text
+        i_subject = lv_sub ).
+
+*     add the spread sheet as attachment to document object
+      document->add_attachment(
+*        i_attachment_type    = 'xls'                 "#EC NOTEXT
+       i_attachment_type    = 'csv'                         "#EC NOTEXT
+       i_attachment_subject = lv_subject               "p_vbeln
+       i_attachment_size    = size
+       i_att_content_hex    = binary_content ).
+
+*     add document object to send request
+      send_request->set_document( document ).
+
+*     --------- add recipient (e-mail address) -----------------------
+*     create recipient object
+      mailto = email.
+      recipient = cl_cam_address_bcs=>create_internet_address( mailto ).
+
+*     add recipient object to send request
+      send_request->add_recipient( recipient ).
+
+*     ---------- send document ---------------------------------------
+      sent_to_all = send_request->send( i_with_error_screen = 'X' ).
+
+*   ------------ exception handling ----------------------------------
+*     replace this rudimentary exception handling
+    catch cx_bcs into bcs_exception.
+      raise exception type cx_bcs.
+
+  endtry.
